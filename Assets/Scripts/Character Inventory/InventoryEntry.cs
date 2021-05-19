@@ -4,15 +4,15 @@ using UnityEngine;
 
 public class InventoryEntry
 {
-    //public ItemPickUp invEntry;
+    public ItemPickUp invEntry;
     public int stackSize;
     public int inventorySlot;
     public int hotBarSlot;
     public Sprite hbSprite;
 
-    public InventoryEntry(int stackSize,  Sprite hbSprite)
+    public InventoryEntry(int stackSize, ItemPickUp invEntry, Sprite hbSprite)
     {
-        //this.invEntry = invEntry;
+        this.invEntry = invEntry;
 
         this.stackSize = stackSize;
         this.hotBarSlot = 0;

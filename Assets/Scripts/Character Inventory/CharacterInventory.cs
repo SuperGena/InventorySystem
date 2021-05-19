@@ -41,8 +41,16 @@ public class CharacterInventory : MonoBehaviour
     void Update()
     {
         #region Watch for Hotbar Keypresses - Called by Character Controller Later
-        //Checking for a hotbar key to be pressed
-        // TODO: Add some keypresses
+        
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            TriggerItemUse(104);
+        }
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            DisplayInventory();
+        }
+
         #endregion
 
         //Check to see if the item has already been added - Prevent duplicate adds for 1 item
@@ -56,15 +64,15 @@ public class CharacterInventory : MonoBehaviour
     {
         addedItem = false;
 
-        if ((charStats.characterDefinition.currentEncumbrance + itemToStore.itemDefinition.itemWeight) <= charStats.characterDefinition.maxEncumbrance)
-        {
-            itemEntry.invEntry = itemToStore;
-            itemEntry.stackSize = 1;
-            itemEntry.hbSprite = itemToStore.itemDefinition.itemIcon;
+        //if ((charStats.characterDefinition.currentEncumbrance + itemToStore.itemDefinition.itemWeight) <= charStats.characterDefinition.maxEncumbrance)
+        //{
+        //    itemEntry.invEntry = itemToStore;
+        //    itemEntry.stackSize = 1;
+        //    itemEntry.hbSprite = itemToStore.itemDefinition.itemIcon;
 
-            //addedItem = false;
-            itemToStore.gameObject.SetActive(false);
-        }
+        //    //addedItem = false;
+        //    itemToStore.gameObject.SetActive(false);
+        //}
     }
 
     void TryPickUp()
@@ -128,7 +136,7 @@ public class CharacterInventory : MonoBehaviour
     }
 
 
-    bool AddItemToInv(bool finishedAdding)
+    bool AddItemToInventory(bool finishedAdding)
     {
         itemsInInventory.Add(idCount, new InventoryEntry(itemEntry.stackSize, Instantiate(itemEntry.invEntry), itemEntry.hbSprite));
 
@@ -150,24 +158,149 @@ public class CharacterInventory : MonoBehaviour
         return finishedAdding;
     }
 
+    int IncreaseID(int currentID)
+    {
+        int newID = 1;
+
+        for (int itemCount = 1; itemCount <= itemsInInventory.Count; itemCount++)
+        {
+            if (itemsInInventory.ContainsKey(newID))
+            {
+                newID += 1;
+            }
+            else return newID;
+        }
+
+        return newID;
+    }
 
     private void AddItemToHotBar(InventoryEntry itemForHotBar)
     {
+        int hotBarCounter = 0;
+        bool increaseCount = false;
 
+        //Check for open hotbar slot
+        foreach (Image images in hotBarDisplayHolders)
+        {
+            hotBarCounter += 1;
+
+            if (itemForHotBar.hotBarSlot == 0)
+            {
+                if (images.sprite == null)
+                {
+                    //Add item to open hotbar slot
+                    itemForHotBar.hotBarSlot = hotBarCounter;
+                    //Change hotbar sprite to show item
+                    images.sprite = itemForHotBar.hbSprite;
+                    increaseCount = true;
+                    break;
+                }
+            }
+            else if (itemForHotBar.invEntry.itemDefinition.isStackable)
+            {
+                increaseCount = true;
+            }
+        }
+
+        if (increaseCount)
+        {
+            hotBarDisplayHolders[itemForHotBar.hotBarSlot - 1].GetComponentInChildren<Text>().text = itemForHotBar.stackSize.ToString();
+        }
+
+        increaseCount = false;
     }
+
 
     void DisplayInventory()
     {
-
+        if (InventoryDisplayHolder.activeSelf == true)
+        {
+            InventoryDisplayHolder.SetActive(false);
+        }
+        else
+        {
+            InventoryDisplayHolder.SetActive(true);
+        }
     }
 
     void FillInventoryDisplay()
     {
+        int slotCounter = 9;
 
+        foreach (KeyValuePair<int, InventoryEntry> ie in itemsInInventory)
+        {
+            slotCounter += 1;
+            inventoryDisplaySlots[slotCounter].sprite = ie.Value.hbSprite;
+            ie.Value.inventorySlot = slotCounter - 9;
+        }
+
+        while (slotCounter < 29)
+        {
+            slotCounter++;
+            inventoryDisplaySlots[slotCounter].sprite = null;
+        }
     }
 
     public void TriggerItemUse(int itemToUseID)
     {
+        bool triggerItem = false;
 
+        foreach (KeyValuePair<int, InventoryEntry> ie in itemsInInventory)
+        {
+            if (itemToUseID > 100)
+            {
+                itemToUseID -= 100;
+
+                if (ie.Value.hotBarSlot == itemToUseID)
+                {
+                    triggerItem = true;
+                }
+            }
+            else
+            {
+                if (ie.Value.inventorySlot == itemToUseID)
+                {
+                    triggerItem = true;
+                }
+            }
+
+            if (triggerItem)
+            {
+                if (ie.Value.stackSize == 1)
+                {
+                    if (ie.Value.invEntry.itemDefinition.isStackable)
+                    {
+                        if (ie.Value.hotBarSlot != 0)
+                        {
+                            hotBarDisplayHolders[ie.Value.hotBarSlot - 1].sprite = null;
+                            hotBarDisplayHolders[ie.Value.hotBarSlot - 1].GetComponentInChildren<Text>().text = "0";
+                        }
+
+                        ie.Value.invEntry.UseItem();
+                        itemsInInventory.Remove(ie.Key);
+                        break;
+                    }
+                    else
+                    {
+                        ie.Value.invEntry.UseItem();
+                        if (!ie.Value.invEntry.itemDefinition.isIndestructable)
+                        {
+                            itemsInInventory.Remove(ie.Key);
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    ie.Value.invEntry.UseItem();
+                    ie.Value.stackSize -= 1;
+                    hotBarDisplayHolders[ie.Value.hotBarSlot - 1].GetComponentInChildren<Text>().text = ie.Value.stackSize.ToString();
+                    break;
+                }
+            }
+        }
+
+        FillInventoryDisplay();
     }
+
 }
